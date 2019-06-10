@@ -1,7 +1,8 @@
+
+import asyncio
 import logging
 
 import bogobarf as bb
-import asyncio
 
 
 async def main():
@@ -13,11 +14,16 @@ async def main():
     pub = node.publisher('/bla')
     # for x in range(10000):
     for x in range(10):
-        await pub.write(x)
+        msg = {
+            'foo': x,
+            'blaa': [1,2,3]
+        }
+        await pub.write(msg)
 
-    # print('got back:', await node.read_msg())
+    # print('got back:', await node.connection.read_msg())
     await node.disconnect()
 
-print('Enter io loop')
+logging.basicConfig(level=logging.DEBUG)
+logging.info('Enter io loop')
 asyncio.run(main())
-print('Exit io loop')
+logging.info('Exit io loop')
