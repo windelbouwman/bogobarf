@@ -1,32 +1,55 @@
 
+
 use serde::{Serialize, Deserialize};
 // use tokio::futures::Sink;
 // use serde_cbor;
-// use bytes::Bytes;
+use bytes::Bytes;
 // use tokio::codec::{Framed, LengthDelimitedCodec};
-// use std::iter::FromIterator;
+use std::iter::FromIterator;
 // use futures::Sink;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Message {
+pub struct OldMessage {
     pub id: i64,
     pub text: String,
 }
 
-pub struct RpcRequest {
-    pub sequence_id: i64,
-    pub method: String,
-}
-
-pub struct RpcResponse {
-    pub sequence_id: i64,
-}
 
 // Wire message:
-pub enum Message2 {
-    RpcRequest(RpcRequest),
-    RpcResponse(RpcResponse),
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+pub enum Message {
+    #[serde(rename = "call")] 
+    RpcRequest {
+        #[serde(rename = "seq")] 
+        sequence_id: u32,
+        method: String,
+        args: Vec<String>,
+    },
+
+    #[serde(rename = "ret")] 
+    RpcResponse {
+        #[serde(rename = "seq")] 
+        sequence_id: u32,
+    },
+
+    #[serde(rename = "pub")] 
+    Publish {
+        topic: String,
+        value: String,
+    },
+
+    #[serde(rename = "bye")]
+    Bye,
+
     Event,
+}
+
+impl Message {
+    fn to_bytes(&self) -> Bytes {
+        let bytes = serde_cbor::to_vec(&self).unwrap();
+        Bytes::from_iter(bytes.iter())
+    }
 }
 
 /*

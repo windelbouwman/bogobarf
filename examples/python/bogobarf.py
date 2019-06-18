@@ -29,6 +29,7 @@ class Node:
         self.seq_id = 0
         self._response_queues = {}
         self._pub_handlers = {}  # callbacks to subscriptions
+        self._services = {}
     
     async def connect(self):
         self.logger.info('Connecting')
@@ -227,6 +228,7 @@ class Peer:
         return self.server.topics
 
     async def handle_register(self, name):
+        self.logger.debug(f'Peer registered under name {name}')
         self.name = name
 
     async def handle_announce(self, topic):
@@ -278,7 +280,7 @@ class Peer:
             self.logger.error(f'Unknown message {msg}')
 
 
-FANCY_HEADER = """
+FANCY_HEADER = r"""
    ____     U  ___ u   ____    U  ___ u   ____      _       ____     _____  
 U | __")u    \/"_ \/U /"___|u   \/"_ \/U | __")uU  /"\  uU |  _"\ u |" ___| 
  \|  _ \/    | | | |\| |  _ /   | | | | \|  _ \/ \/ _ \/  \| |_) |/U| |_  u 
@@ -358,24 +360,24 @@ def draw_table(rows):
     assert num_columns[1:] == num_columns[:-1]
     num_columns = num_columns[0]
     raise NotImplementedError()
-    column_widths = [
-    ]
-    for row in data:
-        row[c]
+    # column_widths = [
+    # ]
+    # for row in data:
+    #     row[c]
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', help='Increase verbosity', action='count', default=0)
     subparsers = parser.add_subparsers(dest='command', required=True)
-    serve_parser = subparsers.add_parser('serve')
-    client_parser = subparsers.add_parser('client')
+    subparsers.add_parser('serve')
+    subparsers.add_parser('client')
     pub_parser = subparsers.add_parser('pub')
     pub_parser.add_argument('topic', help='The topic to publish to')
     pub_parser.add_argument('value')
     echo_parser = subparsers.add_parser('echo')
     echo_parser.add_argument('topic', help='The topic to echo')
-    list_parser = subparsers.add_parser('list')
+    subparsers.add_parser('list')
     args = parser.parse_args()
 
     level = logging.DEBUG if args.v else logging.INFO

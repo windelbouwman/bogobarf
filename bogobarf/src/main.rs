@@ -3,6 +3,8 @@ mod server;
 mod fancyheader;
 mod client;
 mod message;
+mod peer;
+mod connection;
 
 #[macro_use]
 extern crate log;
