@@ -1,13 +1,10 @@
 [package]
-name = "bogobarf_cli"
+name = "listener"
 version = "0.1.0"
 authors = ["Windel Bouwman <windel@windel.nl>"]
 edition = "2018"
 
 [dependencies]
 
-bogobarf = { path = "../bogobarf" }
-clap = "2.33.0"
-log = "0.4.6"
-simplelog = "0.5.3"
+bogobarf = { path = "../../../bogobarf" }
 tokio = "0.1.20"

@@ -11,7 +11,7 @@ async def main():
 
     # node.write_msg('bogobarf-python!'.encode())
 
-    pub = node.publisher('/bla')
+    pub = await node.publisher('/bla')
     # for x in range(10000):
     for x in range(10):
         msg = {

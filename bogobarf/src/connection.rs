@@ -28,7 +28,7 @@ impl Connection {
         let tx_thread = rx
             .fold(framed_sink, |framed_sink2, message: Message| {
                 let data = message.to_bytes();
-                info!("Sending out (in middle of fold!) {:?}", data);
+                debug!("Sending out (in middle of fold!) {:?}", data);
                 framed_sink2.send(data).map_err(|_| ())
             })
             .map(|_| ());
@@ -37,9 +37,9 @@ impl Connection {
         // Start rx thread:
         let rx_thread = framed_stream
             .for_each(|packet| {
-                info!("Incoming data: {:?}", packet);
+                debug!("Incoming data: {:?}", packet);
                 let message: Message = serde_cbor::from_slice(&packet).unwrap();
-                info!("Received message: {:?}", message);
+                debug!("Received message: {:?}", message);
                 Ok(())
             })
             .map_err(|e| println!("Error! {:?}", e));
@@ -52,7 +52,7 @@ impl Connection {
         &self,
         message: Message,
     ) -> futures::sink::Send<mpsc::UnboundedSender<Message>> {
-        info!("Tx message: {:?}", message);
+        debug!("Tx message: {:?}", message);
         self.tx.clone().send(message)
     }
 
