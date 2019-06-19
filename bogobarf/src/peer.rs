@@ -1,66 +1,49 @@
-
-
 extern crate tokio;
-use tokio::net::{TcpStream};
-use tokio::prelude::*;
-use tokio::io;
-use tokio::codec::{LengthDelimitedCodec, Framed};
-use crate::message::OldMessage;
+use crate::message::Message;
 use futures::sync::mpsc;
-use bytes::Bytes;
-use std::iter::FromIterator;
-use futures::stream::SplitSink;
+use tokio::codec::{Framed, LengthDelimitedCodec};
+use tokio::io;
+use tokio::net::TcpStream;
+use tokio::prelude::*;
 
 pub fn process_client(socket: TcpStream) {
     info!("Got incoming socket! {:?}", socket);
-    // socket
-    // let (framed_sink, framed_stream)
-    let framed_socket = Framed::new(socket, LengthDelimitedCodec::new());
+    let (framed_sink, framed_stream) = Framed::new(socket, LengthDelimitedCodec::new()).split();
 
-    let (framed_sink, framed_stream) = framed_socket.split();
-    // tx_task(framed_sink);
-
-    let (tx, rx) = mpsc::unbounded::<OldMessage>();
-
-    // fn do_tx(msg: Message) -> IntoFuture<Item=(), Error=()> {
-    //     let bytes = serde_cbor::to_vec(&msg).unwrap();
-    //     let data = Bytes::from_iter(bytes.iter());
-    //     Ok(())
-    // }
+    let (tx, rx) = mpsc::unbounded::<Message>();
 
     // Start message processor:
-    let thingy2 = rx.fold(framed_sink, |framed_sink2, msg: OldMessage| {
-        info!("Tx-ing {:?}", msg);
-        let bytes = serde_cbor::to_vec(&msg).unwrap();
-        let data = Bytes::from_iter(bytes.iter());
-        framed_sink2.send(data)
-        // .map(|_| ())
-        .map_err(|err| println!("Failed: {:?}", err))
-    })
-    .map(|_| ())
-    .map_err(|err| println!("Failed: {:?}", err));
+    let thingy2 = rx
+        .fold(framed_sink, |framed_sink2, msg| {
+            info!("Tx-ing {:?}", msg);
+            let data = msg.to_bytes();
+            framed_sink2
+                .send(data)
+                // .map(|_| ())
+                .map_err(|err| println!("Failed: {:?}", err))
+        })
+        .map(|_| ())
+        .map_err(|err| println!("Failed: {:?}", err));
     tokio::spawn(thingy2);
 
-    let thingy = framed_stream.for_each(move |packet| {
-        // debug!("Got: {:?}", &packet);
-        // try to decode cbor package:
-        let message: OldMessage = serde_cbor::from_slice(&packet).unwrap();
+    let thingy = framed_stream
+        .for_each(move |packet| {
+            // debug!("Got: {:?}", &packet);
+            // try to decode cbor package:
+            let message: Message = serde_cbor::from_slice(&packet).unwrap();
 
-        info!("Received message: {:?}", message);
+            info!("Received message: {:?}", message);
 
-        // Create response and place onto queue!
-        let message2 = OldMessage { id: 1337, text: "Response!".to_string() };
+            // Create response and place onto queue!
+            let message2 = Message::RpcResponse { sequence_id: 1337 };
 
-        tx.clone().send(message2)
-        .map(|_| ())
-        .map_err(|_| io::ErrorKind::Other.into())
-        // Ok(())
-    })
-    .map_err(|err| println!("Failed: {:?}", err));
+            tx.clone()
+                .send(message2)
+                .map(|_| ())
+                .map_err(|_| io::ErrorKind::Other.into())
+            // Ok(())
+        })
+        .map_err(|err| println!("Failed: {:?}", err));
 
     tokio::spawn(thingy);
-}
-
-fn recv() {
-    
 }

@@ -1,6 +1,4 @@
-
-
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 // use tokio::futures::Sink;
 // use serde_cbor;
 use bytes::Bytes;
@@ -14,26 +12,25 @@ pub struct OldMessage {
     pub text: String,
 }
 
-
 // Wire message:
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum Message {
-    #[serde(rename = "call")] 
+    #[serde(rename = "call")]
     RpcRequest {
-        #[serde(rename = "seq")] 
+        #[serde(rename = "seq")]
         sequence_id: u32,
         method: String,
         args: Vec<String>,
     },
 
-    #[serde(rename = "ret")] 
+    #[serde(rename = "ret")]
     RpcResponse {
-        #[serde(rename = "seq")] 
+        #[serde(rename = "seq")]
         sequence_id: u32,
     },
 
-    #[serde(rename = "pub")] 
+    #[serde(rename = "pub")]
     Publish {
         topic: String,
         value: String,
@@ -46,7 +43,7 @@ pub enum Message {
 }
 
 impl Message {
-    fn to_bytes(&self) -> Bytes {
+    pub fn to_bytes(&self) -> Bytes {
         let bytes = serde_cbor::to_vec(&self).unwrap();
         Bytes::from_iter(bytes.iter())
     }
