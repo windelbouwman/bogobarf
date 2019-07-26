@@ -28,6 +28,8 @@ pub enum Message {
     RpcResponse {
         #[serde(rename = "seq")]
         sequence_id: u32,
+
+        result: String,
     },
 
     #[serde(rename = "pub")]

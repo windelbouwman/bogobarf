@@ -35,7 +35,10 @@ pub fn process_client(socket: TcpStream) {
             info!("Received message: {:?}", message);
 
             // Create response and place onto queue!
-            let message2 = Message::RpcResponse { sequence_id: 1337 };
+            let message2 = Message::RpcResponse {
+                sequence_id: 1337,
+                result: "fubar".to_string(),
+            };
 
             tx.clone()
                 .send(message2)

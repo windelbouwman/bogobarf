@@ -2,8 +2,8 @@
  This example demonstrates how to publish a value in bogobarf.
 */
 
-use tokio::prelude::*;
 use bogobarf::create_client;
+use tokio::prelude::*;
 
 fn main() {
     println!("Talker starts talking.");

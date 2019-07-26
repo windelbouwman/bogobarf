@@ -4,12 +4,14 @@ use tokio::net::TcpStream;
 use crate::connection::Connection;
 use crate::message::Message;
 use futures::future::Future;
-use futures::sync::mpsc;
+use futures::oneshot;
+use futures::sync::{mpsc, oneshot::Sender};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::sync::{Mutex, Arc};
+use std::sync::{Arc, Mutex};
 use tokio::prelude::*;
 
+#[derive(Debug)]
 pub struct ClientNode {
     seq_nr: Mutex<RefCell<u32>>,
     connection: Connection,
@@ -17,8 +19,9 @@ pub struct ClientNode {
     client_data: Arc<ClientData>,
 }
 
+#[derive(Debug)]
 pub struct ClientData {
-    response_queues: Mutex<RefCell<HashMap<u32, mpsc::UnboundedSender<Message>>>>,
+    response_queues: Mutex<RefCell<HashMap<u32, Sender<Message>>>>,
 }
 
 impl ClientNode {
@@ -90,10 +93,15 @@ impl ClientNode {
         debug!("Invoking {}", method_name);
         let seq_nr = self.get_seq_nr();
 
-        let (tx, rx) = mpsc::unbounded::<Message>();
+        let (tx, rx) = oneshot::<Message>();
 
         // Create response object:
-        self.client_data.response_queues.lock().unwrap().borrow_mut().insert(seq_nr, tx);
+        self.client_data
+            .response_queues
+            .lock()
+            .unwrap()
+            .borrow_mut()
+            .insert(seq_nr, tx);
 
         // Now send request.
         let req_message = Message::RpcRequest {
@@ -104,11 +112,41 @@ impl ClientNode {
 
         self.send_message(req_message).and_then(move |()| {
             // Wait for response here.
-            error!("TODO: use this: {:?}", rx);
-            let result = "fuu".to_string();
-            Ok(result)
+            rx.into_future()
+                .and_then(|message| {
+                    let result = if let Message::RpcResponse { result, .. } = message {
+                        result
+                    } else {
+                        panic!("Response must be rpc response!");
+                    };
+                    Ok(result)
+                })
+                .map_err(|_| {
+                    error!("Error in split!");
+                })
         })
     }
+
+    /*
+    fn handle_message(&self, message: Message) -> impl Future<Item=(), Error=()> {
+        debug!("handling message {:?}", message);
+        match message {
+            Message::Publish { topic, value } => {
+                if let Some(handle_queue) = self.subscriptions.lock().unwrap().borrow().get(&topic) {
+                    handle_queue.clone().send(value)
+                    .map(|_| Ok(()))
+                    .into_future()
+                } else {
+                    futures::finished(Ok(()))
+                    .into_future()
+                }
+            },
+            x => {
+                error!("Unhandled message {:?}", x);
+            }
+        }
+    }
+    */
 }
 
 pub fn create_client() -> impl Future<Item = ClientNode, Error = ()> {
@@ -120,28 +158,9 @@ pub fn create_client() -> impl Future<Item = ClientNode, Error = ()> {
         .and_then(|stream| {
             debug!("Connected!");
             let client_node = ClientNode::new(stream);
-            client_node
-                .register("rust-client".to_string())
-                .map(|_| client_node)
+            client_node.register("rust-client".to_string()).map(|_| {
+                debug!("Call completed!");
+                client_node
+            })
         })
 }
-
-// Incoming message handler
-    /*
-fn handle_incoming_task(rx_channel: Stream<Message>) {
-        fn handle_message(&self, message: Message) -> impl Future<Item=(), Error=()> {
-            info!("Received message: {:?}", message);
-            match message {
-                Message::Publish { topic, value } => {
-                    if let Some(handle_queue) = self.subscriptions.borrow().get(&topic) {
-                        handle_queue.clone().send(value)
-                        .map(|_| Ok())
-                    }
-                },
-                x => {
-                    error!("Unhandled message {:?}", x);
-                }
-            }
-        }
-}
-    */

@@ -1,10 +1,8 @@
-
 /* This example demonstrates how to subscribe to a topic.
 */
 
-use tokio::prelude::*;
 use bogobarf::create_client;
-
+use tokio::prelude::*;
 
 fn main() {
     println!("Listener is starting");

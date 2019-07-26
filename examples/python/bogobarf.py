@@ -151,6 +151,7 @@ class Connection:
         self.writer = writer
 
     async def write_msg(self, msg):
+        self.logger.debug(f'Writing msg {msg}')
         data = cbor.dumps(msg)
         self.logger.debug(f'Packing {len(data)} bytes')
         header = struct.pack('>I', len(data))
@@ -164,11 +165,12 @@ class Connection:
         header = await self.read_bytes(4)
         assert len(header) == 4
         length, = struct.unpack('>I', header)
-        self.logger.debug(f'Reading {length} bytes')
+        self.logger.debug(f'Reading message of {length} bytes')
         data = await self.read_bytes(length)
         self.logger.debug(f'Read {len(data)} bytes')
         assert len(data) == length
         msg = cbor.loads(data)
+        self.logger.debug(f'Read message {msg}')
         return msg
 
     async def read_bytes(self, amount):
@@ -230,6 +232,7 @@ class Peer:
     async def handle_register(self, name):
         self.logger.debug(f'Peer registered under name {name}')
         self.name = name
+        return 'ok'
 
     async def handle_announce(self, topic):
         self.logger.debug(f'Peer announced {topic}')

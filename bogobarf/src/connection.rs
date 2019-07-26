@@ -15,6 +15,7 @@ use serde_cbor;
 
 use crate::message::Message;
 
+#[derive(Debug)]
 pub struct Connection {
     tx: mpsc::UnboundedSender<Message>,
 }
@@ -35,13 +36,23 @@ impl Connection {
         tokio::spawn(tx_thread);
 
         // Start rx thread:
+        // let (tx2, _rx2) = mpsc::unbounded();
         let rx_thread = framed_stream
-            .for_each(|packet| {
+            .for_each(move |packet| {
                 debug!("Incoming data: {:?}", packet);
-                let message: Message = serde_cbor::from_slice(&packet).unwrap();
-                debug!("Received message: {:?}", message);
-                Ok(())
+                match serde_cbor::from_slice::<Message>(&packet) {
+                    Ok(message) => {
+                        debug!("Received message: {:?}", message);
+                        // Ok(tx2.clone().send(message))
+                        Ok(())
+                    }
+                    Err(e) => {
+                        error!("Error: {:?}", e);
+                        Err(std::io::Error::from(std::io::ErrorKind::Other))
+                    }
+                }
             })
+            // .map(|_| ())
             .map_err(|e| println!("Error! {:?}", e));
         tokio::spawn(rx_thread);
 

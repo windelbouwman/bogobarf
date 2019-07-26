@@ -1,4 +1,3 @@
-
 #[macro_use]
 extern crate log;
 extern crate simplelog;
@@ -17,10 +16,12 @@ fn main() {
     let matches = App::new("bogobarf")
         .version("0.0.2")
         .about("Robotic middleware")
-        .arg(Arg::with_name("v")
-                               .short("v")
-                               .multiple(true)
-                               .help("Sets the level of verbosity"))
+        .arg(
+            Arg::with_name("v")
+                .short("v")
+                .multiple(true)
+                .help("Sets the level of verbosity"),
+        )
         .subcommand(SubCommand::with_name("serve").about("Starts the server"))
         .subcommand(SubCommand::with_name("ping").about("Pings the server"))
         .subcommand(SubCommand::with_name("list").about("List topics on the server"))
@@ -69,11 +70,13 @@ fn main() {
     }
 }
 
-
 fn ping() {
     info!("PeNGG");
 
-    let client = create_client().map(|_| ());
+    let client = create_client().map(|node| {
+        info!("Created node {:?}", node);
+        ()
+    });
     tokio::run(client);
 }
 
