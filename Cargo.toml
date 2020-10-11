@@ -2,8 +2,8 @@
 [workspace]
 
 members = [
-    "bogobarf",
-    "bogobarf_cli",
-    "examples/rust/talker",
-    "examples/rust/listener",
+    "rust/bogobarf",
+    "rust/bogobarf_cli",
+    "rust/examples/talker",
+    "rust/examples/listener",
 ]

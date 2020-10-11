@@ -6,5 +6,5 @@ edition = "2018"
 
 [dependencies]
 
-bogobarf = { path = "../../../bogobarf" }
+bogobarf = { path = "../../bogobarf" }
 tokio = "0.1.20"
