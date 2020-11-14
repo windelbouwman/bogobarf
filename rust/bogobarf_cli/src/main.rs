@@ -6,7 +6,6 @@ extern crate clap;
 use clap::{App, Arg, SubCommand};
 
 extern crate tokio;
-use tokio::prelude::*;
 
 // crate bogobarf;
 use bogobarf::create_client;
@@ -73,52 +72,50 @@ fn main() {
 fn ping() {
     info!("PeNGG");
 
-    let client = create_client().map(|node| {
-        info!("Created node {:?}", node);
-        ()
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let client_node = create_client().await.unwrap();
+        info!("Created node {:?}", client_node);
     });
-    tokio::run(client);
 }
 
 /// Publish a value to a topic.
 fn publish(topic: String, value: String) {
     info!("publishing to topic");
 
-    let task = create_client().and_then(|client_node| {
-        client_node
-            .publish(topic, value)
-            .and_then(move |_| client_node.bye())
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let client_node = create_client().await.unwrap();
+        client_node.publish(topic, value).await.unwrap();
+
+        client_node.bye().await.unwrap();
     });
-    tokio::run(task);
 }
 
 fn topic_list() {
     info!("Listing all to topics");
 
-    let task = create_client().and_then(|client_node| {
-        client_node.topic_list().and_then(move |topics| {
-            for topic in topics {
-                println!("Topic: {}", topic);
-            }
-            client_node.bye()
-        })
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let client_node = create_client().await.unwrap();
+
+        let topics = client_node.topic_list().await.unwrap();
+        for topic in topics {
+            println!("Topic: {}", topic);
+        }
+        client_node.bye().await.unwrap();
     });
-    tokio::run(task);
 }
 
 fn topic_echo(topic: String) {
     info!("Echoing topic {}", topic);
 
-    let task = create_client().and_then(|client_node| {
-        client_node
-            .subscribe(topic)
-            .for_each(|value| {
-                info!("Got value: {}", value);
-                Ok(())
-            })
-            .map_err(|e| {
-                println!("Error: {:?}", e);
-            })
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let client_node = create_client().await.unwrap();
+        let mut values = client_node.subscribe(topic).await.unwrap();
+        while let Some(value) = values.recv().await {
+            info!("Got value: {}", value);
+        }
     });
-    tokio::run(task);
 }

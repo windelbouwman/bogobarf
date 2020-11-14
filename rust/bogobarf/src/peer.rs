@@ -1,36 +1,35 @@
 extern crate tokio;
 use crate::message::Message;
-use futures::sync::mpsc;
-use tokio::codec::{Framed, LengthDelimitedCodec};
-use tokio::io;
+use futures::{SinkExt, StreamExt};
 use tokio::net::TcpStream;
-use tokio::prelude::*;
+use tokio::sync::mpsc;
+use tokio_util::codec::{FramedRead, FramedWrite, LengthDelimitedCodec};
 
 pub fn process_client(socket: TcpStream) {
     info!("Got incoming socket! {:?}", socket);
-    let (framed_sink, framed_stream) = Framed::new(socket, LengthDelimitedCodec::new()).split();
+    let (read_half, write_half) = socket.into_split();
+    let mut framed_stream = FramedRead::new(read_half, LengthDelimitedCodec::new());
+    let mut framed_sink = FramedWrite::new(write_half, LengthDelimitedCodec::new());
 
-    let (tx, rx) = mpsc::unbounded::<Message>();
+    let (tx, mut rx) = mpsc::channel::<Message>(25);
 
-    // Start message processor:
-    let thingy2 = rx
-        .fold(framed_sink, |framed_sink2, msg| {
+    // tokio::spawn(thingy2);
+    tokio::spawn(async move {
+        while let Some(msg) = rx.next().await {
             info!("Tx-ing {:?}", msg);
             let data = msg.to_bytes();
-            framed_sink2
-                .send(data)
-                // .map(|_| ())
-                .map_err(|err| println!("Failed: {:?}", err))
-        })
-        .map(|_| ())
-        .map_err(|err| println!("Failed: {:?}", err));
-    tokio::spawn(thingy2);
+            framed_sink.send(data).await.unwrap();
+        }
+    });
 
-    let thingy = framed_stream
-        .for_each(move |packet| {
+    // Start message processor:
+
+    tokio::spawn(async move {
+        while let Some(packet) = framed_stream.next().await {
             // debug!("Got: {:?}", &packet);
             // try to decode cbor package:
-            let message: Message = serde_cbor::from_slice(&packet).unwrap();
+            let p2: Vec<u8> = packet.unwrap().to_vec();
+            let message: Message = serde_cbor::from_slice(&p2).unwrap();
 
             info!("Received message: {:?}", message);
 
@@ -40,13 +39,10 @@ pub fn process_client(socket: TcpStream) {
                 result: "fubar".to_string(),
             };
 
-            tx.clone()
-                .send(message2)
-                .map(|_| ())
-                .map_err(|_| io::ErrorKind::Other.into())
+            tx.send(message2).await.unwrap();
             // Ok(())
-        })
-        .map_err(|err| println!("Failed: {:?}", err));
-
-    tokio::spawn(thingy);
+            // })
+            // .map_err(|err| println!("Failed: {:?}", err));
+        }
+    });
 }

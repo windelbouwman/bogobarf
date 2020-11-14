@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-// use tokio::futures::Sink;
 // use serde_cbor;
 use bytes::Bytes;
 // use tokio::codec::{Framed, LengthDelimitedCodec};
@@ -46,8 +45,8 @@ pub enum Message {
 
 impl Message {
     pub fn to_bytes(&self) -> Bytes {
-        let bytes = serde_cbor::to_vec(&self).unwrap();
-        Bytes::from_iter(bytes.iter())
+        let bytes: Vec<u8> = serde_cbor::to_vec(&self).unwrap();
+        Bytes::from_iter(bytes.into_iter())
     }
 }
 

@@ -227,7 +227,7 @@ class Peer:
         self.name = '<unnamed>'
 
     async def handle_topic_list(self):
-        return self.server.topics
+        return str(list(self.server.topics.keys()))
 
     async def handle_register(self, name):
         self.logger.debug(f'Peer registered under name {name}')

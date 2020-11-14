@@ -4,7 +4,6 @@ extern crate tokio;
 use crate::fancyheader::print_header;
 use crate::peer::process_client;
 use tokio::net::TcpListener;
-use tokio::prelude::*;
 
 pub fn start_server() {
     let server = Server::default();
@@ -30,20 +29,28 @@ impl Server {
         print_header();
 
         info!("Starting server");
-        let addr = "127.0.0.1:6142".parse().unwrap();
-        let listener = TcpListener::bind(&addr).unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            match self.run_async().await {
+                Ok(()) => {
+                    info!("Server is done");
+                }
+                Err(err) => {
+                    error!("Error in server: {:?}", err);
+                }
+            }
+        });
+    }
 
-        let server = listener
-            .incoming()
-            .for_each(|socket| {
-                process_client(socket);
-                Ok(())
-            })
-            .map_err(|err| {
-                println!("Error in accept: {:?}", err);
-            });
+    async fn run_async(&self) -> Result<(), std::io::Error> {
+        let addr: std::net::SocketAddr = "127.0.0.1:6142".parse().unwrap();
 
         info!("Server listening on {:?}", addr);
-        tokio::run(server);
+        let listener = TcpListener::bind(&addr).await?;
+
+        loop {
+            let (socket, _address) = listener.accept().await?;
+            process_client(socket);
+        }
     }
 }

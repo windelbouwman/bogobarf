@@ -2,14 +2,13 @@
 */
 
 use bogobarf::create_client;
-use tokio::prelude::*;
 
 fn main() {
     println!("Listener is starting");
-    let task = create_client().and_then(|client_node| {
-        client_node
-            .publish("/chatter".to_string(), "Hello world".to_string())
-            .and_then(move |_| client_node.bye())
+
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(async {
+        let client_node = create_client().await.unwrap();
+        client_node.bye().await.unwrap();
     });
-    tokio::run(task);
 }
